@@ -24,7 +24,6 @@
 
 @property (assign, nonatomic) IBOutlet UILabel *callFromLabel;
 - (IBAction)answerButtonClicked:(id)sender;
-//- (IBAction)holdButtonClicked:(id)sender;
 - (IBAction)declineButtonClicked:(id)sender;
 
 @end

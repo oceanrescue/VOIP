@@ -8,13 +8,14 @@
 
 #import "VNViewController.h"
 #import "SimpleVoiceManager.h"
+#import "VNVoiceCallProxyObjects.h"
 
 @interface VNViewController () {
     StateType _state;
     int _callID;
     BOOL _calling;
 }
-@property (nonatomic, weak) SimpleVoiceManager *voiceManager;
+@property (nonatomic, weak) GTalkManager *voiceManager;
 @property (nonatomic, retain) UIActionSheet *actions;
            
 @end
@@ -34,7 +35,7 @@
     
     self.callFromLabel.numberOfLines = 2;
     self.callFromLabel.font = [UIFont systemFontOfSize:10.];
-    self.voiceManager = [SimpleVoiceManager sharedInstance];
+    self.voiceManager = [GTalkManager sharedInstance];
     self.voiceManager.delegate = self;
     self.password.secureTextEntry = YES;
     self.call2Button.enabled = FALSE;
@@ -75,9 +76,6 @@
     [self.call2Button setTitle:@"Cancel" forState:UIControlStateNormal];
     _calling = YES;
 }
-//- (IBAction)holdButtonClicked:(id)sender {
-//    [self.voiceManager holdCallWithID:_callID];
-//}
 - (IBAction)declineButtonClicked:(id)sender {
     [self.voiceManager declineCallWithID:_callID];
 }
@@ -91,10 +89,10 @@
 }
 
 #pragma mark - VoiceManager Delegates
--(void)voiceManager:(SimpleVoiceManager *)aManager didFinishWithError:(NSError *)anError {
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager didFinishWithError:(NSError *)anError {
     NSLog(@"Error : %@", anError);
 }
--(void)voiceManager:(SimpleVoiceManager *)aManager didChangeState:(StateType)aState {
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager didChangeState:(StateType)aState {
     NSLog(@"\nNew state : %i\n", aState);
     _state = aState;
     if (aState == STATE_OPEN) {
@@ -112,13 +110,17 @@
         self.message.alpha = 0.65;
     }
 }
--(void)voiceManager:(SimpleVoiceManager *)aManager recievedMessage:(NSString *)aMessage fromUser:(NSString *)aUser {
-    self.message.text = [NSString stringWithFormat:@"%@ : %@", aUser, aMessage];
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager receivedMessage:(VNMessageProxyObjects*)aMessage {
+	if (aMessage.body.length > 1) {
+		self.message.text = [NSString stringWithFormat:@"%@ : %@", aMessage.jid.email, aMessage.body];
+	}
 }
--(void)voiceManager:(SimpleVoiceManager*)aManager recievedVoiceCall:(VNVoiceCall *)aCall {
-    NSString *message = [NSString stringWithFormat:@"Voice Call from <%@>", aCall.jid];
+
+
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager receivedVoiceCall:(VNVoiceCall*)aCall {
+    NSString *message = [NSString stringWithFormat:@"Voice Call from <%@>", aCall.jid.email];
     self.callFromLabel.text = message;
-    _callID = aCall.callID;
+    _callID = [aCall.callID intValue];
     if (_actions == nil) {
         UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:message delegate:self cancelButtonTitle:nil destructiveButtonTitle:nil otherButtonTitles:@"Answer", @"Decline", nil];
         sheet.destructiveButtonIndex = 2;
@@ -127,10 +129,10 @@
     }
 }
 
--(void)voiceManager:(SimpleVoiceManager *)aManager voiceCallStateDidChanged:(VNVoiceCall *)aCall {
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager voiceCallStateDidChanged:(VNVoiceCall *)aCall {
     CallState state = aCall.state;
     if (_callID == 0) {
-        _callID = aCall.callID;
+        _callID = [aCall.callID intValue];
     }
     if (state == STATE_USER_OFFLINE
         || state == STATE_SENTTERMINATE
@@ -150,8 +152,17 @@
     }
     else if (state == STATE_RECEIVEDINITIATE)
     {
-        self.callFromLabel.text = [NSString stringWithFormat:@"Voice call from <%@>", aCall.jid];
-        [self.call2Button setTitle:@"Call TO" forState:UIControlStateNormal];
+        self.callFromLabel.text = [NSString stringWithFormat:@"Voice call from <%@>", aCall.jid.email];
+        [self.call2Button setTitle:@"Cancel" forState:UIControlStateNormal];
+		NSString *message = [NSString stringWithFormat:@"Voice Call from <%@>", aCall.jid.email];
+		self.callFromLabel.text = message;
+		_callID = [aCall.callID intValue];
+		if (_actions == nil) {
+			UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:message delegate:self cancelButtonTitle:nil destructiveButtonTitle:nil otherButtonTitles:@"Answer", @"Decline", nil];
+			sheet.destructiveButtonIndex = 2;
+			[sheet showInView:self.view];
+			self.actions = sheet;
+		}
     }
     else if (state == STATE_RECEIVEDINITIATE_ACK)
     {
@@ -160,7 +171,7 @@
     }
     else
     {
-        self.callFromLabel.text = [NSString stringWithFormat:@"CallID: %i, state : <%@>", aCall.callID, aCall.reason];
+        self.callFromLabel.text = [NSString stringWithFormat:@"CallID: %i, state : <%@>", [aCall.callID intValue], aCall.reason];
     }
     
 }
@@ -199,11 +210,8 @@
             [self answerButtonClicked:nil];
             break;
         case 1:
-//            [self holdButtonClicked:nil];
-//            break;
-//        case 2:
-            [self declineButtonClicked:nil];
         default:
+            [self declineButtonClicked:nil];
             break;
     }
 }

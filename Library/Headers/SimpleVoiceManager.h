@@ -6,16 +6,15 @@
 //  Copyright (c) 2013 Valery N. All rights reserved.
 //
 
-//#import <Foundation/Foundation.h>
-#import "SimpleVoiceManager-C-Interface.h"
-
-
+#import <Foundation/Foundation.h>
 
 #define kXmppHost "talk.google.com"
 #define kXmppPort 5222
 #define kSTUN "stun.l.google.com:19302"
 
-#define SimpleVoiceManagerErrorDomain @"SimpleVoiceManagerErrorDomain"
+#define SimpleVoiceManagerErrorDomain       @"SimpleVoiceManagerErrorDomain"
+#define SimpleVoiceManagerXMPPErrorDomain   @"SimpleVoiceManagerXMPPErrorDomain"
+#define SimpleVoiceManagerCallErrorDomain   @"SimpleVoiceManagerCallErrorDomain"
 
 typedef NS_ENUM(NSUInteger, StateType) {
     STATE_NONE      = 0,        //!< Nonexistent state
@@ -25,44 +24,34 @@ typedef NS_ENUM(NSUInteger, StateType) {
     STATE_CLOSED    = 4,        //!< Session closed, possibly due to error.
 };
 
-
-typedef NS_ENUM(NSUInteger, CallState) {
-    STATE_INIT                  = 0,
-    STATE_SENTINITIATE          = 1,    // sent initiate, waiting for Accept or Reject
-    STATE_RECEIVEDINITIATE      = 2,    // received an initiate. Call Accept or Reject
-    STATE_RECEIVEDINITIATE_ACK  = 3,    // received an initiate ack. Client is alive.
-    STATE_SENTPRACCEPT          = 4,    // sent provisional Accept
-    STATE_SENTACCEPT            = 5,    // sent accept. begin connecting transport
-    STATE_RECEIVEDPRACCEPT      = 6,    // received provisional Accept, waiting for Accept
-    STATE_RECEIVEDACCEPT        = 7,    // received accept. begin connecting transport
-    STATE_SENTMODIFY            = 8,    // sent modify, waiting for Accept or Reject
-    STATE_RECEIVEDMODIFY        = 9,    // received modify, call Accept or Reject
-    STATE_SENTBUSY              = 10,   // sent busy after receiving initiate
-    STATE_SENTREJECT            = 11,   // sent reject after receiving initiate
-    STATE_RECEIVEDBUSY          = 12,   // received busy after sending initiate
-    STATE_RECEIVEDREJECT        = 13,   // received reject after sending initiate
-    STATE_SENTREDIRECT          = 14,   // sent direct after receiving initiate
-    STATE_SENTTERMINATE         = 15,   // sent terminate (any time / either side)
-    STATE_RECEIVEDTERMINATE     = 16,   // received terminate (any time / either side)
-    STATE_INPROGRESS            = 17,   // session accepted and in progress
-    STATE_DEINIT                = 18,   // session is being destroyed
-    STATE_USER_OFFLINE          = 19,   // User is offline or unavailible
+typedef NS_ENUM(NSUInteger, VNXMPPErrors) {
+    VNXMPP_ERROR_NONE = 0,          //!< No error
+    VNXMPP_ERROR_XML,               //!< Malformed XML or encoding error
+    VNXMPP_ERROR_STREAM,            //!< XMPP stream error - see GetStreamError()
+    VNXMPP_ERROR_VERSION,           //!< XMPP version error
+    VNXMPP_ERROR_UNAUTHORIZED,      //!< User is not authorized (rejected credentials)
+    VNXMPP_ERROR_TLS,               //!< TLS could not be negotiated
+    VNXMPP_ERROR_AUTH,              //!< Authentication could not be negotiated
+    VNXMPP_ERROR_BIND,              //!< Resource or session binding could not be negotiated
+    VNXMPP_ERROR_CONNECTION_CLOSED, //!< Connection closed by output handler.
+    VNXMPP_ERROR_DOCUMENT_CLOSED,   //!< Closed by </stream:stream>
+    VNXMPP_ERROR_SOCKET,            //!< Socket error
+    VNXMPP_ERROR_NETWORK_TIMEOUT,   //!< Some sort of timeout (eg., we never got the roster)
+    VNXMPP_ERROR_MISSING_USERNAME,   //!< User has a Google Account but no nickname
+    VNXMPP_ERROR_MISSING_Credential //!< User has a Google Account but no nickname
 };
 
-
+//@class SimpleVoiceManager;
 @protocol SimpleVoiceManagerDelegate;
 
 /*!
- @class SimpleVoiceManager
+ @protocol SimpleVoiceManager
  @abstract A singleton object that manages one-2-one messaging and voice calls
  @inherits from NSObject
  @comform to NSObject
  */
-@interface SimpleVoiceManager : NSObject {
-    __weak id <SimpleVoiceManagerDelegate> _delegate;
-    @private
-    StateType _managerState;
-}
+
+@protocol SimpleVoiceManagerProtocol <NSObject>
 /*!
  @property id <SimpleVoiceManagerDelegate> delegate
  @abstract A reciever's delegate that conforms SimpleVoiceManagerDelegate protocol
@@ -79,12 +68,17 @@ typedef NS_ENUM(NSUInteger, CallState) {
  @method (SimpleVoiceManager*)sharedInstance
  @abstract create and return the singleton instance of class
  */
-+(SimpleVoiceManager*)sharedInstance;
++(id <SimpleVoiceManagerProtocol>)sharedInstance;
 /*!
  @method destroy
  @abstract destroy singleton
  */
 +(void)destroy;
+/*!
+ @method serviceName
+ @abstract return human readable service name,ex. "Google Talk" (localized)
+ */
+//+(NSString*)serviceName;
 
 /*
  *  Primary Methods
@@ -131,6 +125,7 @@ typedef NS_ENUM(NSUInteger, CallState) {
  @discussion acceptCallWithID: uses call_ID to determine which incoming call should be declined (for future multi-calls).
  */
 -(void)declineCallWithID:(int)callID;
+//-(void)declineCallWithID:(int)callID busy:(BOOL)flag;
 /*!
  @method endCallWithID:
  @abstract End current Call
@@ -144,7 +139,9 @@ typedef NS_ENUM(NSUInteger, CallState) {
 /*
  *  //////////////////////////////////////////////////////////////////////////
  */
-@class VNVoiceCall;
+
+
+@class VNVoiceCall, VNMessageProxyObjects;
 /*!
  @protocol SimpleVoiceManagerDelegate
  @abstract Voice Manager delegate protocol
@@ -160,15 +157,15 @@ typedef NS_ENUM(NSUInteger, CallState) {
  @param (NSString*)aUser - aUser is a string object with JID format. It's not equal to user's email.
  @discussion You can use this method to show alert dialog or update list of messages
  */
--(void)voiceManager:(SimpleVoiceManager*)aManager recievedMessage:(NSString*)aMessage fromUser:(NSString*)aUser;
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager receivedMessage:(VNMessageProxyObjects*)aMessage;
 /*!
  @method voiceManager:recievedVoiceCall:
  @abstract Tells the delegate that Voice Manager receives the request for Voice call from remote user.
  @param (SimpleVoiceManager*)aManager - a Voice Manager instance
  @param recievedVoiceCall:(VNVoiceCall*)aCall - a VNVoiceCall instance that incapsulate call-relative data
- @discussion You could use this method to determine call_ID and choose a proper action (accept/decline, etc.)
+ @discussion You could use this method to determine call_ID and choose a proper action (accept/decline, etc.). In some cases (signal schema could change) you should check the state of call in voiceManager:voiceCallStateDidChanged:
  */
--(void)voiceManager:(SimpleVoiceManager*)aManager recievedVoiceCall:(VNVoiceCall*)aCall;
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager receivedVoiceCall:(VNVoiceCall*)aCall;
 /*!
  @method voiceManager:voiceCallStateDidChanged:
  @abstract Tells the delegate that the state of Call was changed.
@@ -176,7 +173,7 @@ typedef NS_ENUM(NSUInteger, CallState) {
  @param recievedVoiceCall:(VNVoiceCall*)aCall - a VNVoiceCall instance that incapsulate call-relative data
  @discussion You could use this method to determine what happens
  */
--(void)voiceManager:(SimpleVoiceManager *)aManager voiceCallStateDidChanged:(VNVoiceCall*)aCall;
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager voiceCallStateDidChanged:(VNVoiceCall*)aCall;
 /*!
  @method voiceManager:didFinishWithError:
  @abstract Tells the delegate that the Voice Manager did finish with error.
@@ -184,7 +181,7 @@ typedef NS_ENUM(NSUInteger, CallState) {
  @param (NSError*)anError - an NSError instance
  @discussion You could use this method to why did error occurred
  */
--(void)voiceManager:(SimpleVoiceManager*)aManager didFinishWithError:(NSError*)anError;
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager didFinishWithError:(NSError*)anError;
 /*!
  @method voiceManager:didChangeState:
  @abstract Informs the delegate that state of Voice Manager was changed.
@@ -192,42 +189,21 @@ typedef NS_ENUM(NSUInteger, CallState) {
  @param (StateType)aState - see StateType enum for particular state
  @discussion You could use this method to manage logic with state of Voice Manager
  */
--(void)voiceManager:(SimpleVoiceManager*)aManager didChangeState:(StateType)aState;
+-(void)voiceManager:(id <SimpleVoiceManagerProtocol>)aManager didChangeState:(StateType)aState;
 
 @end
 
 
-
 /*
- *  //////////////////////////////////////////////////////////////////////////
+ *  Google Talk Manager
  */
+@interface GTalkManager : NSObject <SimpleVoiceManagerProtocol> {
+    __weak id <SimpleVoiceManagerDelegate> _delegate;
+@private
+    StateType _managerState;
+    NSMutableDictionary *_call2Track;
+}
++(GTalkManager*)sharedInstance;
 
-/*!
- @class VNVoiceCall
- @abstract Simple object that encapsulates the call-related data
- @inherits from NSObject
- @comform to NSObject
- */
-@interface VNVoiceCall : NSObject
-/*!
- @property jid
- @abstract the Jabber Identifiers (JID)
- @discussion see http://xmpp.org/extensions/xep-0029.html for more information
- */
-@property (nonatomic, copy) NSString *jid;
-/*!
- @property reason
- @abstract a reason or state in human-readable format
- */
-@property (nonatomic, copy) NSString *reason;
-/*!
- @property state
- @abstract current state of Call. See possible values in CallState enum
- */
-@property (nonatomic) CallState state;
-/*!
- @property callID
- @abstract call identifier
- */
-@property (nonatomic) int callID;
+
 @end

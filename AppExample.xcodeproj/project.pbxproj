@@ -65,9 +65,9 @@
 		DE5DAF4D170C0BEE00E94C72 /* AppExample copy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AppExample copy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE5DAF4E170C0BEE00E94C72 /* AppExample copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "AppExample copy-Info.plist"; path = "/Volumes/3TB/5.Development/AppExample/AppExample copy-Info.plist"; sourceTree = "<absolute>"; };
 		DE5DAF53170C0C6F00E94C72 /* libSimpleVoiceManager.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libSimpleVoiceManager.a; sourceTree = "<group>"; };
-		DE5DAF55170C0C7B00E94C72 /* SimpleVoiceManager-C-Interface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SimpleVoiceManager-C-Interface.h"; sourceTree = "<group>"; };
 		DE5DAF56170C0C7B00E94C72 /* SimpleVoiceManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SimpleVoiceManager.h; sourceTree = "<group>"; };
 		DE5DAF57170C0C8800E94C72 /* libSimpleVoiceManagerSimulator.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libSimpleVoiceManagerSimulator.a; sourceTree = "<group>"; };
+		DE8DA7CA199FCB7600B2D0A5 /* VNVoiceCallProxyObjects.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VNVoiceCallProxyObjects.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,8 +192,8 @@
 		DE5DAF52170C0C4F00E94C72 /* Headers */ = {
 			isa = PBXGroup;
 			children = (
-				DE5DAF55170C0C7B00E94C72 /* SimpleVoiceManager-C-Interface.h */,
 				DE5DAF56170C0C7B00E94C72 /* SimpleVoiceManager.h */,
+				DE8DA7CA199FCB7600B2D0A5 /* VNVoiceCallProxyObjects.h */,
 			);
 			path = Headers;
 			sourceTree = "<group>";
@@ -372,6 +372,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = "armv7 armv7s";
 			};
 			name = Debug;
 		};
@@ -398,6 +399,7 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 armv7s";
 			};
 			name = Release;
 		};
